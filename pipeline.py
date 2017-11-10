@@ -62,3 +62,28 @@ def combining_thresholds_gradient(img):
     combined = np.zeros_like(dir_binary)
     combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
     return combined
+
+
+"""
+Taken from http://www.bogotobogo.com/python/OpenCV_Python/python_opencv3_Changing_ColorSpaces_RGB_HSV_HLS.php
+
+The big reason is that it separates color information (chroma) from intensity or lighting (luma). 
+Because value is separated, you can construct a histogram or thresholding rules using only saturation and hue. 
+This in theory will work regardless of lighting changes in the value channel. 
+In practice it is just a nice improvement. 
+Even by singling out only the hue you still have a very meaningful representation of the base color that will likely work much better than RGB.
+The end result is a more robust color thresholding over simpler parameters." 
+"""
+def color_s_channel(img,s_thresh=(0, 255)):
+    hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS).astype(np.float)
+    s_channel = hls[:,:,2]
+    s_binary = np.zeros_like(s_channel)
+    s_binary[(s_channel >= s_thresh[0]) & (s_channel <= s_thresh[1])] = 1
+    return s_binary
+
+def combined_binary_thresholds(img):
+    thresholds_gradient = combining_thresholds_gradient(img)
+    s_binary = color_s_channel(img, s_thresh=(50, 255))
+    combined_binary = np.zeros_like(s_binary)
+    combined_binary[(s_binary == 1) | (thresholds_gradient == 1)] = 1
+    return combined_binary
