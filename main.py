@@ -6,6 +6,7 @@ import glob
 def operations_on_frame(frame):
     img = np.copy(frame)
     img = pipeline.distortion_image(img)
+    img = pipeline.combining_thresholds_gradient(img)
     return img
 
 def read_video(filename='challenge_video.mp4'):
