@@ -9,6 +9,7 @@ def operations_on_frame(frame):
     img = pipeline.distortion_image(img)
     img = pipeline.transfrom_street_lane(img)
     img = pipeline.combined_binary_thresholds(img)
+    img = pipeline.identify_lane_line(img)
     return img
 
 def read_video(filename='challenge_video.mp4'):
@@ -38,9 +39,13 @@ def read_test_images():
     for idx, fname in enumerate(images):
         img = cv2.imread(fname)
         # dst = pipeline.distortion_image(img)
-        dst = pipeline.transfrom_street_lane(img)
-        filepath = "output_images/transform-"+ str(fname.split('/')[-1])
-        cv2.imwrite(filepath,dst)
+        # dst = pipeline.transfrom_street_lane(img)
+        img = pipeline.distortion_image(img)
+        img = pipeline.transfrom_street_lane(img)
+        img = pipeline.combined_binary_thresholds(img)
+        pipeline.identify_lane_line(img)
+        # filepath = "output_images/transform-"+ str(fname.split('/')[-1])
+        # cv2.imwrite(filepath,dst)
 
 def main(args):
     read_video(filename=args.fileinput)

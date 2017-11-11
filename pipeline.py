@@ -1,7 +1,7 @@
 import pickle
 import cv2
 import numpy as np
-
+import sliding_windows as sw
 def distortion_image(img):
     # Read in the saved camera matrix and distortion coefficients
     # These are the arrays you calculated using cv2.calibrateCamera()
@@ -128,3 +128,6 @@ def transfrom_street_lane(img):
     M = cv2.getPerspectiveTransform(src, dst)
     warped = cv2.warpPerspective(img, M, img_size[::-1], flags=cv2.INTER_LINEAR)
     return warped
+def identify_lane_line(img):
+    img = sw.fit_polynomial(img)
+    return img
