@@ -87,3 +87,44 @@ def combined_binary_thresholds(img):
     combined_binary = np.zeros_like(s_binary)
     combined_binary[(s_binary == 1) | (thresholds_gradient == 1)] = 1
     return combined_binary
+
+def region_of_interest(img):
+     # draw a rectangle
+    img_size = img.shape[:2]
+    vertices = np.array([[
+        (img_size[1]*.20,img_size[0]*.9),
+        (img_size[1]*.43, img_size[0]*.64), 
+        (img_size[1]*.58,  img_size[0]*.64), 
+        (img_size[1]*.90,img_size[0]*.9)
+        ]], dtype=np.int32)
+    # mask color
+    if len(img.shape) > 2:
+        channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
+        ignore_mask_color = (255,) * channel_count
+    else:
+        ignore_mask_color = 255
+    
+    #defining a blank mask to start with
+    mask = np.zeros_like(img)   
+    cv2.fillPoly(mask, vertices, ignore_mask_color)
+
+    masked_image = cv2.bitwise_and(img, mask)
+    
+    return masked_image, vertices
+
+def transfrom_street_lane(img):
+    img, vertices = region_of_interest(img)
+    img_size = img.shape[:2]
+    
+    src = np.float32(list(vertices))
+    dst = np.float32(
+        [[0,img_size[0]],
+        # [img_size[1]*.23, 0], 
+        # [img_size[1]*.77, 0], 
+        [0, 0], 
+        [img_size[1], 0],
+        [img_size[1],img_size[0]]])
+        
+    M = cv2.getPerspectiveTransform(src, dst)
+    warped = cv2.warpPerspective(img, M, img_size[::-1], flags=cv2.INTER_LINEAR)
+    return warped

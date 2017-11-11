@@ -2,10 +2,12 @@ import numpy as np
 import cv2
 import pipeline
 import glob
+import argparse
 
 def operations_on_frame(frame):
     img = np.copy(frame)
     img = pipeline.distortion_image(img)
+    img = pipeline.transfrom_street_lane(img)
     img = pipeline.combined_binary_thresholds(img)
     return img
 
@@ -35,13 +37,18 @@ def read_test_images():
 
     for idx, fname in enumerate(images):
         img = cv2.imread(fname)
-        dst = pipeline.distortion_image(img)
-        filepath = "output_images/undistort-"+ str(fname.split('/')[-1])
+        # dst = pipeline.distortion_image(img)
+        dst = pipeline.transfrom_street_lane(img)
+        filepath = "output_images/transform-"+ str(fname.split('/')[-1])
         cv2.imwrite(filepath,dst)
 
-def main():
-    read_video()
+def main(args):
+    read_video(filename=args.fileinput)
     #read_test_images()
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--fileinput',
+                            type=str, help='finename of a video file')
+    
+    main(parser.parse_args())
