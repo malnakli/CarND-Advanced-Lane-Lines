@@ -118,12 +118,10 @@ def transfrom_street_lane(img):
     
     src = np.float32(list(vertices))
     dst = np.float32(
-        [[0,img_size[0]],
-        # [img_size[1]*.23, 0], 
-        # [img_size[1]*.77, 0], 
+        [[img_size[1]*.11,img_size[0]],
         [0, 0], 
-        [img_size[1], 0],
-        [img_size[1],img_size[0]]])
+        [img_size[1],0],
+        [img_size[1]*.92,img_size[0]]])
         
     M = cv2.getPerspectiveTransform(src, dst)
     warped = cv2.warpPerspective(img, M, img_size[::-1], flags=cv2.INTER_LINEAR)
