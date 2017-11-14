@@ -86,7 +86,7 @@ def combined_binary_thresholds(img):
     s_binary = color_s_channel(img, s_thresh=(50, 255))
     combined_binary = np.zeros_like(s_binary)
     combined_binary[(s_binary == 1) | (thresholds_gradient == 1)] = 1
-    return combined_binary
+    return combined_binary 
 
 def region_of_interest(img):
      # draw a rectangle
@@ -118,10 +118,11 @@ def transfrom_street_lane(img):
     
     src = np.float32(list(vertices))
     dst = np.float32(
-        [[img_size[1]*.11,img_size[0]],
-        [0, 0], 
-        [img_size[1],0],
-        [img_size[1]*.92,img_size[0]]])
+
+        [[img_size[1]*(-.093+0.22),img_size[0]],
+        [img_size[1]*(-.22+.22), 0], 
+        [img_size[1]*(1.28-.28),0],
+        [img_size[1]*(1.22-.28),img_size[0]]])
         
     M = cv2.getPerspectiveTransform(src, dst)
     # Compute the inverse perspective transform
