@@ -3,17 +3,21 @@ import cv2
 import pipeline
 import glob
 import argparse
+from line_class import Tracking,Line
 
-def operations_on_frame(frame):
+def operations_on_frame(frame,tracking):
     img = np.copy(frame)
-    img = pipeline.distortion_image(img)
-    img = pipeline.transfrom_street_lane(img)
-    img = pipeline.combined_binary_thresholds(img)
-    img = pipeline.identify_lane_line(img)
-    return img
+    distort = pipeline.distortion_image(img)
+    warped,Minv = pipeline.transfrom_street_lane(distort)
+    binary_warped = pipeline.combined_binary_thresholds(warped)
+    binary_warped_line = pipeline.identify_lane_line(binary_warped,tracking)
+    result = pipeline.draw_on_original_image(warped=binary_warped,tracking=tracking,Minv=Minv,image=frame)
+    return result
 
 def read_video(filename='challenge_video.mp4'):
     cap = cv2.VideoCapture(filename)
+    # create Tracking object
+    tracking = Tracking(Line(),Line())
 
     while(True):
         # Capture frame-by-frame
@@ -21,7 +25,7 @@ def read_video(filename='challenge_video.mp4'):
         if frame is None:
             break
 
-        frame = operations_on_frame(frame)
+        frame = operations_on_frame(frame,tracking)
         
         # Our operations on the frame come here
         # Display the resulting frame
@@ -43,9 +47,10 @@ def read_test_images():
         img = pipeline.distortion_image(img)
         img = pipeline.transfrom_street_lane(img)
         img = pipeline.combined_binary_thresholds(img)
-        pipeline.identify_lane_line(img)
-        # filepath = "output_images/transform-"+ str(fname.split('/')[-1])
-        # cv2.imwrite(filepath,dst)
+        dst = pipeline.identify_lane_line(img)
+        filepath = "output_images/fit-lines-2-"+ str(fname.split('/')[-1])
+        cv2.imwrite(filepath,dst)
+        break
 
 def main(args):
     read_video(filename=args.fileinput)

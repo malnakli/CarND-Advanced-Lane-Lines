@@ -124,8 +124,29 @@ def transfrom_street_lane(img):
         [img_size[1]*.92,img_size[0]]])
         
     M = cv2.getPerspectiveTransform(src, dst)
+    # Compute the inverse perspective transform
+    Minv = cv2.getPerspectiveTransform(dst,src)
+
     warped = cv2.warpPerspective(img, M, img_size[::-1], flags=cv2.INTER_LINEAR)
-    return warped
-def identify_lane_line(img):
-    img = sw.fit_polynomial(img)
+    return warped, Minv
+
+def identify_lane_line(img,tracking):
+    img = sw.fit_polynomial(img,tracking)
     return img
+
+def draw_on_original_image(warped,tracking,Minv,image):
+    warp_zero = np.zeros_like(warped).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([tracking.left_line.recent_xfitted, tracking.left_line.ally]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([tracking.right_line.recent_xfitted, tracking.right_line.ally])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
+    newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0])) 
+    # Combine the result with the original image
+    result = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
+    return result
+
