@@ -8,10 +8,10 @@ from line_class import Tracking,Line
 def operations_on_frame(frame,tracking):
     img = np.copy(frame)
     distort = pipeline.distortion_image(img)
-    warped,Minv = pipeline.transfrom_street_lane(distort)
-    binary_warped = pipeline.combined_binary_thresholds(warped)
-    binary_warped_line = pipeline.identify_lane_line(binary_warped,tracking)
-    result = pipeline.draw_on_original_image(warped=binary_warped,tracking=tracking,Minv=Minv,image=frame)
+    binary = pipeline.combined_binary_thresholds(distort)
+    warped,Minv = pipeline.transfrom_street_lane(binary)
+    binary_warped_line = pipeline.identify_lane_line(warped,tracking)
+    result = pipeline.draw_on_original_image(warped=warped,tracking=tracking,Minv=Minv,image=frame)
     return result
 
 def read_video(filename='challenge_video.mp4'):
@@ -25,11 +25,13 @@ def read_video(filename='challenge_video.mp4'):
         if frame is None:
             break
 
-        frame = operations_on_frame(frame,tracking)
+        img = operations_on_frame(frame,tracking)
         
         # Our operations on the frame come here
         # Display the resulting frame
-        cv2.imshow('frame',frame)
+        cv2.imshow('img',img)
+        #cv2.imshow('frame',frame)
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         
@@ -38,19 +40,24 @@ def read_video(filename='challenge_video.mp4'):
     cv2.destroyAllWindows()
 
 def read_test_images():
+    tracking = Tracking(Line(),Line())
     images = glob.glob('test_images/*.jpg') 
+    import matplotlib.pyplot as plt
 
     for idx, fname in enumerate(images):
-        img = cv2.imread(fname)
-        # dst = pipeline.distortion_image(img)
-        # dst = pipeline.transfrom_street_lane(img)
-        img = pipeline.distortion_image(img)
-        img = pipeline.transfrom_street_lane(img)
-        img = pipeline.combined_binary_thresholds(img)
-        dst = pipeline.identify_lane_line(img)
-        filepath = "output_images/fit-lines-2-"+ str(fname.split('/')[-1])
+        frame = cv2.imread(fname)
+        img = np.copy(frame)
+        #gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+        distort = pipeline.distortion_image(img)
+        binary = pipeline.combined_binary_thresholds(distort) 
+        warped, Minv = pipeline.transfrom_street_lane(binary)
+        binary_warped_line = pipeline.identify_lane_line(warped,tracking)
+        dst = pipeline.draw_on_original_image(warped=warped,tracking=tracking,Minv=Minv,image=frame)
+        filepath = "output_images/output-"+ str(fname.split('/')[-1])
         cv2.imwrite(filepath,dst)
-        break
+    
+        
 
 def main(args):
     read_video(filename=args.fileinput)

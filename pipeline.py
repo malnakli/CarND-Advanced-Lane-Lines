@@ -54,13 +54,14 @@ def combining_thresholds_gradient(img):
     ksize = 3 # Choose a larger odd number to smooth gradient measurements
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     # Apply each of the thresholding functions
-    gradx = abs_sobel_thresh(gray, orient='x', sobel_kernel=ksize, thresh=(50, 255))
-    grady = abs_sobel_thresh(gray, orient='y', sobel_kernel=ksize, thresh=(50, 255))
-    mag_binary = mag_thresh(gray, sobel_kernel=ksize, mag_thresh=(50, 255))
-    dir_binary = dir_threshold(gray, sobel_kernel=ksize, thresh=(0.7, np.pi/2))
+    gradx = abs_sobel_thresh(gray, orient='x', sobel_kernel=7, thresh=(100, 247))
+    grady = abs_sobel_thresh(gray, orient='y', sobel_kernel=7, thresh=(100, 247))
+    mag_binary = mag_thresh(gray, sobel_kernel=5, mag_thresh=(100, 247))
+    dir_binary = dir_threshold(gray, sobel_kernel=15, thresh=(0.7, 1.3))
 
     combined = np.zeros_like(dir_binary)
-    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
+
+    combined[((gradx == 1) | (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
     return combined
 
 
@@ -83,19 +84,19 @@ def color_s_channel(img,s_thresh=(0, 255)):
 
 def combined_binary_thresholds(img):
     thresholds_gradient = combining_thresholds_gradient(img)
-    s_binary = color_s_channel(img, s_thresh=(50, 255))
+    s_binary = color_s_channel(img, s_thresh=(120, 246))
     combined_binary = np.zeros_like(s_binary)
     combined_binary[(s_binary == 1) | (thresholds_gradient == 1)] = 1
-    return combined_binary 
+    return combined_binary * 255
 
 def region_of_interest(img):
      # draw a rectangle
     img_size = img.shape[:2]
     vertices = np.array([[
-        (img_size[1]*.20,img_size[0]*.9),
+        (img_size[1]*.13,img_size[0]*.96),
         (img_size[1]*.43, img_size[0]*.64), 
         (img_size[1]*.58,  img_size[0]*.64), 
-        (img_size[1]*.90,img_size[0]*.9)
+        (img_size[1]*.92,img_size[0]*.96)
         ]], dtype=np.int32)
     # mask color
     if len(img.shape) > 2:
@@ -119,10 +120,10 @@ def transfrom_street_lane(img):
     src = np.float32(list(vertices))
     dst = np.float32(
 
-        [[img_size[1]*(-.093+0.22),img_size[0]],
-        [img_size[1]*(-.22+.22), 0], 
-        [img_size[1]*(1.28-.28),0],
-        [img_size[1]*(1.22-.28),img_size[0]]])
+        [[img_size[1]*.1,img_size[0]],
+        [0,0], 
+        [img_size[1],  0],
+        [img_size[1]*.92,img_size[0]]])
         
     M = cv2.getPerspectiveTransform(src, dst)
     # Compute the inverse perspective transform
