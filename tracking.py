@@ -25,7 +25,7 @@ class Tracking():
         result = pipeline.draw_on_original_image(
             warped=warped, ploty=self.ploty, leftx=self.l_line.allx, rightx=self.r_line.allx, Minv=Minv, image=frame)
 
-        return binary_warped_line
+        return result
 
     def identify_lane_line(self, img):
         window_centroids = sw.convolve(img)
@@ -50,8 +50,7 @@ class Tracking():
                 [left_fit, self.l_line.current_fit], axis=0)
             self.r_line.diffs = np.diff(
                 [right_fit, self.r_line.current_fit], axis=0)
-            print(self.l_line.diffs, self.r_line.diffs)
-            print()
+           # print(self.l_line.diffs, self.r_line.diffs)
 
     def save_history(self):
         self.l_line.detected = True
@@ -76,8 +75,8 @@ class Tracking():
             np.mean(self.r_line.current_fit) + self.r_line.best_fit) / 2
 
     def check_similar_curvature(self):
-        print(self.l_line.radius_of_curvature, 'px',
-              self.r_line.radius_of_curvature, 'px')
+        # print(self.l_line.radius_of_curvature, 'px',
+        #       self.r_line.radius_of_curvature, 'px')
 
         if self.l_line.radius_of_curvature > self.r_line.radius_of_curvature:
             smaller_v = self.r_line.radius_of_curvature

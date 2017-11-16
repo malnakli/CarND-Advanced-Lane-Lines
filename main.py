@@ -7,10 +7,15 @@ from line_class import Line
 from tracking import Tracking
 
 
-def read_video(filename='challenge_video.mp4'):
+def read_video(filename='challenge_video.mp4', saved=False):
     cap = cv2.VideoCapture(filename)
     # create Tracking object
     tracking = Tracking(Line(), Line())
+
+    if saved:
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Be sure to use lower case
+        output = "output-" + filename
+        out = cv2.VideoWriter(output, fourcc, 20.0, (1280, 720))
 
     while(True):
         # Capture frame-by-frame
@@ -20,10 +25,12 @@ def read_video(filename='challenge_video.mp4'):
 
         img = tracking.next_frame(frame)
 
+        if saved:
+            out.write(img)
+
         # Our operations on the frame come here
         # Display the resulting frame
         cv2.imshow('img', img)
-        # cv2.imshow('frame',frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -57,7 +64,7 @@ def read_test_images():
 
 
 def main(args):
-    read_video(filename=args.fileinput)
+    read_video(filename=args.fileinput, saved=args.save_video)
     # read_test_images()
 
 
@@ -65,5 +72,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--fileinput',
                         type=str, help='finename of a video file')
+    parser.add_argument('-s', '--save_video',
+                        type=bool, help='Either to save the output result or not')
 
     main(parser.parse_args())
