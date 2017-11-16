@@ -27,5 +27,4 @@ class Line():
         # current # frame
         self.current_frame_num = 0
         # last frame where line where detected
-        self.last_frame_detected = None
-
+        self.last_frame_detected = 0
