@@ -42,20 +42,3 @@ class Line():
             return False
         else:
             return True
-
-
-# Tracking class
-class Tracking():
-    def __init__(self, left_line, right_line):
-        self.left_line = left_line
-        self.right_line = right_line
-
-    def recent_xfitted(self, left, right):
-        self.left_line.recent_xfitted = left
-        self.right_line.recent_xfitted = right
-
-    def allxy(self, y, leftx, rightx):
-        self.left_line.allx = leftx
-        self.left_line.ally = y
-        self.right_line.allx = rightx
-        self.right_line.ally = y

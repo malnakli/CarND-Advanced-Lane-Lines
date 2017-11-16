@@ -76,12 +76,12 @@ def combining_thresholds_gradient(img):
 """
 Taken from http://www.bogotobogo.com/python/OpenCV_Python/python_opencv3_Changing_ColorSpaces_RGB_HSV_HLS.php
 
-The big reason is that it separates color information (chroma) from intensity or lighting (luma). 
-Because value is separated, you can construct a histogram or thresholding rules using only saturation and hue. 
-This in theory will work regardless of lighting changes in the value channel. 
-In practice it is just a nice improvement. 
+The big reason is that it separates color information (chroma) from intensity or lighting (luma).
+Because value is separated, you can construct a histogram or thresholding rules using only saturation and hue.
+This in theory will work regardless of lighting changes in the value channel.
+In practice it is just a nice improvement.
 Even by singling out only the hue you still have a very meaningful representation of the base color that will likely work much better than RGB.
-The end result is a more robust color thresholding over simpler parameters." 
+The end result is a more robust color thresholding over simpler parameters."
 """
 
 
@@ -147,20 +147,34 @@ def transfrom_street_lane(img):
     return warped, Minv
 
 
-def identify_lane_line(img, tracking):
-    img = sw.fit_polynomial(img, tracking)
-    return img
+def identify_lane_line(img):
+    window_centroids = sw.convolve(img)
+    leftx, rightx, ploty, left_curverad, right_curverad = sw.radius_of_curvature(
+        img, window_centroids)
+
+    img = sw.draw_image(img, window_centroids)
+    return img, leftx, rightx, ploty
 
 
-def draw_on_original_image(warped, tracking, Minv, image):
+def draw_on_original_image(warped, leftx, rightx, ploty, Minv, image):
     warp_zero = np.zeros_like(warped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
 
     # Recast the x and y points into usable format for cv2.fillPoly()
+    left_fit = np.polyfit(ploty, leftx, 2)
+    left_fitx = left_fit[0] * ploty**2 + \
+        left_fit[1] * ploty + left_fit[2]
+
+    right_fit = np.polyfit(ploty, rightx, 2)
+    right_fitx = right_fit[0] * ploty ** 2 + \
+        right_fit[1] * ploty + right_fit[2]
+
     pts_left = np.array([np.transpose(
-        np.vstack([tracking.left_line.recent_xfitted, tracking.left_line.ally]))])
+        np.vstack([left_fitx, ploty]))])
+
     pts_right = np.array([np.flipud(np.transpose(
-        np.vstack([tracking.right_line.recent_xfitted, tracking.right_line.ally])))])
+        np.vstack([right_fitx, ploty])))])
+
     pts = np.hstack((pts_left, pts_right))
 
     # Draw the lane onto the warped blank image

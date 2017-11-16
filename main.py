@@ -3,18 +3,8 @@ import cv2
 import pipeline
 import glob
 import argparse
-from line_class import Tracking, Line
-
-
-def operations_on_frame(frame, tracking):
-    img = np.copy(frame)
-    distort = pipeline.distortion_image(img)
-    binary = pipeline.combined_binary_thresholds(distort)
-    warped, Minv = pipeline.transfrom_street_lane(binary)
-    binary_warped_line = pipeline.identify_lane_line(warped, tracking)
-    result = pipeline.draw_on_original_image(
-        warped=warped, tracking=tracking, Minv=Minv, image=frame)
-    return result
+from line_class import Line
+from tracking import Tracking
 
 
 def read_video(filename='challenge_video.mp4'):
@@ -28,7 +18,7 @@ def read_video(filename='challenge_video.mp4'):
         if frame is None:
             break
 
-        img = operations_on_frame(frame, tracking)
+        img = tracking.next_frame(frame)
 
         # Our operations on the frame come here
         # Display the resulting frame
@@ -44,28 +34,31 @@ def read_video(filename='challenge_video.mp4'):
 
 
 def read_test_images():
-    tracking = Tracking(Line(), Line())
     images = glob.glob('test_images/*.jpg')
-    import matplotlib.pyplot as plt
+
+    def save(img, name):
+        filepath = "output_images/" + name + "-" + str(fname.split('/')[-1])
+        cv2.imwrite(filepath, img)
 
     for idx, fname in enumerate(images):
         frame = cv2.imread(fname)
         img = np.copy(frame)
-        #gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-
-        distort = pipeline.distortion_image(img)
-        binary = pipeline.combined_binary_thresholds(distort)
-        warped, Minv = pipeline.transfrom_street_lane(binary)
-        binary_warped_line = pipeline.identify_lane_line(warped, tracking)
-        dst = pipeline.draw_on_original_image(
-            warped=warped, tracking=tracking, Minv=Minv, image=frame)
-        filepath = "output_images/output-" + str(fname.split('/')[-1])
-        cv2.imwrite(filepath, dst)
+        undistort = pipeline.distortion_image(img)
+        save(undistort, 'undistort')
+        thresholds = pipeline.combined_binary_thresholds(undistort)
+        save(thresholds, 'thresholds')
+        warped, Minv = pipeline.transfrom_street_lane(thresholds)
+        save(warped, 'warped')
+        line_fit, leftx, rightx, ploty = pipeline.identify_lane_line(warped)
+        save(line_fit, 'line-fit')
+        output = pipeline.draw_on_original_image(
+            warped=warped, leftx=leftx, rightx=rightx, ploty=ploty, Minv=Minv, image=frame)
+        save(output, 'output')
 
 
 def main(args):
-    read_video(filename=args.fileinput)
-    # read_test_images()
+    # read_video(filename=args.fileinput)
+    read_test_images()
 
 
 if __name__ == "__main__":
