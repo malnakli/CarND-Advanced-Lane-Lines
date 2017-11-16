@@ -7,18 +7,24 @@ import sliding_windows as sw
 
 
 class Tracking():
+    
     def __init__(self, left_line, right_line):
-        self.l_line = left_line
-        self.r_line = right_line
+        self.l = left_line
+        self.r = right_line
+        # since y are the same for left and right lines then used the following instead
         self.ploty = []
+        # the left and right points will be used to draw lines area on the original image
         self.leftx = None
         self.rightx= None
+
+        # last detected window centroids points
+        self.last_window_centroids = None
 
     def next_frame(self, frame):
         img = np.copy(frame)
         # update frame number
-        self.l_line.current_frame_num += 1
-        self.r_line.current_frame_num += 1
+        self.l.current_frame_num += 1
+        self.r.current_frame_num += 1
 
         # undistort the frame
         undistort = pipeline.distortion_image(img)
@@ -35,116 +41,129 @@ class Tracking():
         return result
 
     def identify_lane_line(self, img):
-        window_centroids = sw.convolve(img)
+        
+        if self.l.detected and self.r.detected:
+            window_centroids = sw.update_tops_window_centroids(img,self.last_window_centroids,tops=1)
+        else:
+            window_centroids = sw.convolve(img)
+        
         self._update_x_y(window_centroids=window_centroids,binary_warped=img)
 
         if len(window_centroids) > 0:
-            self.l_line.radius_of_curvature, self.r_line.radius_of_curvature = sw.radius_of_curvature(
-                    img, ploty=self.ploty,leftx=self.l_line.allx,rightx=self.r_line.allx)
+            self.l.radius_of_curvature, self.r.radius_of_curvature = sw.radius_of_curvature(
+                    img, ploty=self.ploty,leftx=self.l.allx,rightx=self.r.allx)
 
             if self.check_similar_curvature():
-                self._save_history()
-                self.leftx = self.l_line.recent_xfitted
-                self.rightx = self.r_line.recent_xfitted
+                self._save_history(window_centroids)
+                self.leftx = self.l.recent_xfitted
+                self.rightx = self.r.recent_xfitted
             else:
                 self.adjust_points()
+        else:
+            # if a frame never detected any window_centroids then use the old values
+            self.leftx = self.l.allx
+            self.rightx = self.r.allx
+            self.l.detected = False 
+            self.r.detected = False 
 
         return sw.draw_image(img, window_centroids)
     
     def adjust_points(self):
         DIFF_SUM = 1
         # check if the left line was detected in the last frame
-        if self.l_line.detected:
-            left_fit = np.polyfit(self.ploty, self.l_line.allx, 2) 
-            self.l_line.diffs = np.diff(
-                [self.l_line.current_fit, left_fit ], axis=0) 
+        if self.l.detected:
+            left_fit = np.polyfit(self.ploty, self.l.allx, 2) 
+            self.l.diffs = np.diff(
+                [self.l.current_fit, left_fit ], axis=0) 
             
             # check if the left line was not detected correctly 
             # BWT this can be done with calculation of radius of curvature by comparing the diffs between two frames
-            diffs = np.sum(np.absolute(np.divide(self.l_line.diffs,left_fit)))
+            diffs = np.sum(np.absolute(np.divide(self.l.diffs,left_fit)))
             print(diffs,'l')
             if  diffs > DIFF_SUM:
-                self.l_line.detected = False
-                self.leftx = self.l_line.recent_xfitted
-                print(self.l_line.current_frame_num,'LLCF',self.l_line.last_frame_detected,'LLLF')
+                self.l.detected = False
+                self.leftx = self.l.recent_xfitted
+                print(self.l.current_frame_num,'LLCF',self.l.last_frame_detected,'LLLF')
             else:
-                self.leftx = self.l_line.allx
+                self.leftx = self.l.allx
 
         # check if the right line was detected in the last frame
-        if self.r_line.detected:
-            right_fit = np.polyfit(self.ploty, self.r_line.allx, 2) 
-            self.r_line.diffs = np.diff(
-                [self.r_line.current_fit ,right_fit ], axis=0) 
+        if self.r.detected:
+            right_fit = np.polyfit(self.ploty, self.r.allx, 2) 
+            self.r.diffs = np.diff(
+                [self.r.current_fit ,right_fit ], axis=0) 
 
             # check if the right line was not detected correctly 
-            diffs = np.sum(np.absolute(np.divide(self.r_line.diffs,right_fit)))
+            diffs = np.sum(np.absolute(np.divide(self.r.diffs,right_fit)))
             print(diffs,'r')
             if diffs > DIFF_SUM:
-                self.r_line.detected = False 
-                self.rightx = self.r_line.recent_xfitted
-                print(self.r_line.current_frame_num,'RLCF',self.r_line.last_frame_detected,'RLLF')
+                self.r.detected = False 
+                self.rightx = self.r.recent_xfitted
+                print(self.r.current_frame_num,'RLCF',self.r.last_frame_detected,'RLLF')
             else:
-                self.rightx = self.r_line.allx
+                self.rightx = self.r.allx
         # when both lines are not detected:
         # - the sum of the differences of line_fits between two frames are bigger than 1  
         # - both lines are not detected in the first frame.
-        if not (self.l_line.detected and self.r_line.detected):
-            self.leftx = self.l_line.allx
-            self.rightx = self.r_line.allx
+        if not (self.l.detected and self.r.detected):
+            self.leftx = self.l.allx
+            self.rightx = self.r.allx
 
             
             
 
     def check_similar_curvature(self):
-        # print(self.l_line.radius_of_curvature, 'px',
-        #       self.r_line.radius_of_curvature, 'px')
+        # print(self.l.radius_of_curvature, 'px',
+        #       self.r.radius_of_curvature, 'px')
 
-        if self.l_line.radius_of_curvature > self.r_line.radius_of_curvature:
-            smaller_v = self.r_line.radius_of_curvature
-            bigger_v = self.l_line.radius_of_curvature
+        if self.l.radius_of_curvature > self.r.radius_of_curvature:
+            smaller_v = self.r.radius_of_curvature
+            bigger_v = self.l.radius_of_curvature
         else:
-            smaller_v = self.l_line.radius_of_curvature
-            bigger_v = self.r_line.radius_of_curvature
+            smaller_v = self.l.radius_of_curvature
+            bigger_v = self.r.radius_of_curvature
 
         similarity = int((smaller_v / bigger_v) * 100)
 
         # since we always divided the smaller/bigger then the value should be between 0 and 1
         if similarity in range(50, 100):
+            print(self.l.radius_of_curvature,'lc' , self.r.radius_of_curvature,'rc')
             return True
 
         return False
     
     # private
-    def _save_history(self):
+    def _save_history(self,window_centroids):
         self._save_history_l_line()
         self._save_history_r_line()
+        self.last_window_centroids = window_centroids
 
     def _save_history_l_line(self):
-        self.l_line.detected = True
-        self.l_line.recent_xfitted = self.l_line.allx
-        self.l_line.current_fit = np.polyfit(
-            self.ploty, self.l_line.recent_xfitted, 2)
-        self.l_line.bestx = (
-            np.mean(self.l_line.recent_xfitted) + self.l_line.bestx) / 2
-        self.l_line.best_fit = (
-            np.mean(self.l_line.current_fit) + self.l_line.best_fit) / 2  
-        self.l_line.last_frame_detected = self.l_line.current_frame_num
+        self.l.detected = True
+        self.l.recent_xfitted = self.l.allx
+        self.l.current_fit = np.polyfit(
+            self.ploty, self.l.recent_xfitted, 2)
+        self.l.bestx = (
+            np.mean(self.l.recent_xfitted) + self.l.bestx) / 2
+        self.l.best_fit = (
+            np.mean(self.l.current_fit) + self.l.best_fit) / 2  
+        self.l.last_frame_detected = self.l.current_frame_num
 
     def _save_history_r_line(self):
-        self.r_line.detected = True
-        self.r_line.recent_xfitted = self.r_line.allx
-        self.r_line.current_fit = np.polyfit(
-            self.ploty, self.r_line.recent_xfitted, 2)
-        self.r_line.bestx = (
-            np.mean(self.r_line.recent_xfitted) + self.r_line.bestx) / 2
-        self.r_line.best_fit = (
-            np.mean(self.r_line.current_fit) + self.r_line.best_fit) / 2
-        self.r_line.last_frame_detected = self.r_line.current_frame_num
+        self.r.detected = True
+        self.r.recent_xfitted = self.r.allx
+        self.r.current_fit = np.polyfit(
+            self.ploty, self.r.recent_xfitted, 2)
+        self.r.bestx = (
+            np.mean(self.r.recent_xfitted) + self.r.bestx) / 2
+        self.r.best_fit = (
+            np.mean(self.r.current_fit) + self.r.best_fit) / 2
+        self.r.last_frame_detected = self.r.current_frame_num
 
     def _update_x_y(self,binary_warped,window_centroids):
         # to cover same y-range as image
         self.ploty = np.linspace(0, binary_warped.shape[0], num=len(window_centroids))
         levels = [level for level in window_centroids]
         # top to bottom
-        self.l_line.allx = np.flip([left for left, right in levels], axis=0)
-        self.r_line.allx = np.flip([right for left, right in levels], axis=0)
+        self.l.allx = np.flip([left for left, right in levels], axis=0)
+        self.r.allx = np.flip([right for left, right in levels], axis=0)
