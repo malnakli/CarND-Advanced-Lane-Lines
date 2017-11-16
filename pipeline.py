@@ -149,14 +149,11 @@ def transfrom_street_lane(img):
 
 def identify_lane_line(img):
     window_centroids = sw.convolve(img)
+    
     # to cover same y-range as image
     ploty = np.linspace(0, img.shape[0], num=len(window_centroids))
+    leftx, rightx =  np.array(window_centroids).T
 
-    levels = [level for level in window_centroids]
-    # top to bottom
-    leftx = np.flip([left for left, right in levels], axis=0)
-    rightx = np.flip([right for left, right in levels], axis=0)
-    
     img = sw.draw_image(img, window_centroids)
     return img, leftx, rightx, ploty
 
@@ -164,6 +161,10 @@ def identify_lane_line(img):
 def draw_on_original_image(warped, leftx, rightx, ploty, Minv, image):
     warp_zero = np.zeros_like(warped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+    
+    # top to bottom
+    leftx = np.flip(leftx, axis=0)
+    rightx = np.flip(rightx, axis=0)
 
     # Recast the x and y points into usable format for cv2.fillPoly()
     left_fit = np.polyfit(ploty, leftx, 2)

@@ -8,8 +8,8 @@ nwindows = 9
 # Set height of windows
 window_height = np.int(720 / nwindows)
 window_width = 50
-margin = window_width / 2  # How much to slide left and right for searching
-
+margin = window_width  # How much to slide left and right for searching
+window = np.ones(window_width)
 
 def draw_image(binary_warped, window_centroids):
     # If we found any window centers
@@ -75,6 +75,7 @@ def radius_of_curvature(binary_warped, ploty,leftx,rightx):
     # I'll choose the maximum y-value, corresponding to the bottom of the image
     y_eval = binary_warped.shape[0]
 
+    print(len(ploty),'x',len(leftx),'y')
     left_fit = np.polyfit(ploty, leftx, 2)
     right_fit = np.polyfit(ploty, rightx, 2)
 
@@ -106,15 +107,32 @@ def radius_curvature_in_meter(binary_warped, y_eval, leftx, rightx, ploty):
     # Now our radius of curvature is in meters
     print(left_curverad, 'm', right_curverad, 'm')
 
+def update_top_line_centroids(binary_warped,old_line_centroids,tops=.1):
+    tops = int(len(old_line_centroids) * tops)
+    line_centroids = old_line_centroids[:-tops]
+    pre_center = line_centroids[-1]
+   
+    for level in range(len(line_centroids), (int)(binary_warped.shape[0] / window_height)):
+        
+        conv_signal = _conv_signal(binary_warped,level)
+        # Find the best left centroid by using past left center as a reference
+        center =  _get_the_next_center(binary_warped,conv_signal,pre_center)
+        # Find the best right centroid by using past right center as a reference
+        
+        # Add what we found for that layer
+        line_centroids = np.append(line_centroids,center)
 
-def update_tops_window_centroids(binary_warped,old_window_centroids,tops=1):
+    return line_centroids
+
+def update_tops_window_centroids(binary_warped,old_window_centroids,tops=.1):
     """
      This method update only the tops windows centroids.
+     tops: how many window centroids should be changed by percentage 
     """
-    window = np.ones(window_width)
+    tops = int(len(old_window_centroids) * tops)
     new_window_centroids = old_window_centroids[:-tops]
      # Add the missing ones
-    new_window_centroids = _add_the_rest_to_window_centroids(binary_warped,new_window_centroids,window)
+    new_window_centroids = _add_the_rest_to_window_centroids(binary_warped,new_window_centroids)
     return new_window_centroids
      
 def convolve(binary_warped):
@@ -124,7 +142,6 @@ def convolve(binary_warped):
     # Store the (left,right) window centroid positions per level
     window_centroids = []
     # Create our window template that we will use for convolutions
-    window = np.ones(window_width)
 
     # First find the two starting positions for the left and right lane by using np.sum to get the vertical image slice
     # and then np.convolve the vertical image slice with the window template
@@ -132,7 +149,7 @@ def convolve(binary_warped):
     # get the quarter bottom  image, slicing horizontally
     bottom_image = binary_warped[int(
         binary_warped.shape[0] * (3 / 4)):]
-
+    
     # divide images into left and right
     l_img = bottom_image[:, : int(binary_warped.shape[1] / 2)]
     r_img = bottom_image[:, int(binary_warped.shape[1] / 2):]
@@ -150,37 +167,41 @@ def convolve(binary_warped):
     # Add what we found for the first layer
     window_centroids.append((l_center, r_center))
     # Add the rest
-    window_centroids = _add_the_rest_to_window_centroids(binary_warped,window_centroids,window)
+    window_centroids = _add_the_rest_to_window_centroids(binary_warped,window_centroids)
     return window_centroids
 
-def _add_the_rest_to_window_centroids(binary_warped,window_centroids,window):
+
+def _get_the_next_center(binary_warped,conv_signal,pre_center):
+    # Use window_width/2 as offset because convolution signal reference is at right side of window, not center of window
+    offset = window_width / 2
+    min_index = int(max(pre_center + offset - margin, 0))
+    max_index = int(
+        min(pre_center + offset + margin, binary_warped.shape[1]))
+    center = np.argmax(
+        conv_signal[min_index:max_index]) + min_index - offset
+
+    return center
+
+
+def _add_the_rest_to_window_centroids(binary_warped,window_centroids):
     pre_l_center = window_centroids[-1][0]
     pre_r_center = window_centroids[-1][1]
     # Go through each layer looking for max pixel locations
     for level in range(len(window_centroids), (int)(binary_warped.shape[0] / window_height)):
-        # convolve the window into the vertical slice of the image
-        image_layer = binary_warped[int(binary_warped.shape[0] - (
-            level + 1) * window_height): int(binary_warped.shape[0] - level * window_height), :]
-
-        image_layer_sum = np.sum(image_layer, axis=0)
-
-        conv_signal = np.convolve(window, image_layer_sum)
+        conv_signal = _conv_signal(binary_warped,level)
         # Find the best left centroid by using past left center as a reference
-        # Use window_width/2 as offset because convolution signal reference is at right side of window, not center of window
-        offset = window_width / 2
-        l_min_index = int(max(pre_l_center + offset - margin, 0))
-        l_max_index = int(
-            min(pre_l_center + offset + margin, binary_warped.shape[1]))
-        l_center = np.argmax(
-            conv_signal[l_min_index:l_max_index]) + l_min_index - offset
+        l_center =  _get_the_next_center(binary_warped,conv_signal,pre_l_center)
         # Find the best right centroid by using past right center as a reference
-        r_min_index = int(max(pre_r_center + offset - margin, 0))
-        r_max_index = int(
-            min(pre_r_center + offset + margin, binary_warped.shape[1]))
-        r_center = np.argmax(
-            conv_signal[r_min_index:r_max_index]) + r_min_index - offset
-        
+        r_center =  _get_the_next_center(binary_warped,conv_signal,pre_r_center)
         # Add what we found for that layer
         window_centroids.append((l_center, r_center))
 
     return window_centroids
+
+def _conv_signal(binary_warped,level):
+     # convolve the window into the vertical slice of the image
+    image_layer = binary_warped[int(binary_warped.shape[0] - (
+        level + 1) * window_height): int(binary_warped.shape[0] - level * window_height), :]
+    image_layer_sum = np.sum(image_layer, axis=0)
+
+    return  np.convolve(window, image_layer_sum)

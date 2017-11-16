@@ -17,8 +17,6 @@ class Tracking():
         self.leftx = None
         self.rightx= None
 
-        # last detected window centroids points
-        self.last_window_centroids = None
 
     def next_frame(self, frame):
         img = np.copy(frame)
@@ -42,34 +40,37 @@ class Tracking():
 
     def identify_lane_line(self, img):
         
-        if self.l.detected and self.r.detected:
-            window_centroids = sw.update_tops_window_centroids(img,self.last_window_centroids,tops=1)
+        if self.leftx is not None or self.rightx is not None > 0 :
+            l_tops = 0.2 if self.l.detected else 0.8
+            r_tops = 0.2 if self.r.detected else 0.8
+            self.l.allx =  sw.update_top_line_centroids(img,self.leftx,tops=l_tops)
+            self.r.allx =  sw.update_top_line_centroids(img,self.rightx,tops=r_tops)
+            window_centroids = np.array((self.l.allx,self.r.allx)).T
         else:
             window_centroids = sw.convolve(img)
-        
-        self._update_x_y(window_centroids=window_centroids,binary_warped=img)
+            self._update_x_y(img,window_centroids)
 
-        if len(window_centroids) > 0:
+        if len(self.l.allx) and len(self.r.allx) > 0:
+            # calculate radius of curvature
             self.l.radius_of_curvature, self.r.radius_of_curvature = sw.radius_of_curvature(
                     img, ploty=self.ploty,leftx=self.l.allx,rightx=self.r.allx)
 
             if self.check_similar_curvature():
-                self._save_history(window_centroids)
+                self._save_history()
                 self.leftx = self.l.recent_xfitted
                 self.rightx = self.r.recent_xfitted
             else:
                 self.adjust_points()
+        
         else:
             # if a frame never detected any window_centroids then use the old values
-            self.leftx = self.l.allx
-            self.rightx = self.r.allx
             self.l.detected = False 
             self.r.detected = False 
 
         return sw.draw_image(img, window_centroids)
     
     def adjust_points(self):
-        DIFF_SUM = 1
+        DIFF_SUM = .4
         # check if the left line was detected in the last frame
         if self.l.detected:
             left_fit = np.polyfit(self.ploty, self.l.allx, 2) 
@@ -126,17 +127,16 @@ class Tracking():
         similarity = int((smaller_v / bigger_v) * 100)
 
         # since we always divided the smaller/bigger then the value should be between 0 and 1
-        if similarity in range(50, 100):
+        if similarity in range(70, 100):
             print(self.l.radius_of_curvature,'lc' , self.r.radius_of_curvature,'rc')
             return True
 
         return False
     
     # private
-    def _save_history(self,window_centroids):
+    def _save_history(self):
         self._save_history_l_line()
         self._save_history_r_line()
-        self.last_window_centroids = window_centroids
 
     def _save_history_l_line(self):
         self.l.detected = True
@@ -163,7 +163,5 @@ class Tracking():
     def _update_x_y(self,binary_warped,window_centroids):
         # to cover same y-range as image
         self.ploty = np.linspace(0, binary_warped.shape[0], num=len(window_centroids))
-        levels = [level for level in window_centroids]
-        # top to bottom
-        self.l.allx = np.flip([left for left, right in levels], axis=0)
-        self.r.allx = np.flip([right for left, right in levels], axis=0)
+        self.l.allx, self.r.allx  = np.array(window_centroids).T
+        
