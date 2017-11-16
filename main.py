@@ -57,8 +57,8 @@ def read_test_images():
 
 
 def main(args):
-    # read_video(filename=args.fileinput)
-    read_test_images()
+    read_video(filename=args.fileinput)
+    # read_test_images()
 
 
 if __name__ == "__main__":
