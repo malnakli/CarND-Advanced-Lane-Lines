@@ -24,3 +24,8 @@ class Line():
         self.allx = None
         # y values for detected line pixels
         self.ally = None
+        # current # frame
+        self.current_frame_num = 0
+        # last frame where line where detected
+        self.last_frame_detected = None
+

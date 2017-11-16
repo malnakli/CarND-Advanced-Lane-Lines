@@ -69,15 +69,8 @@ between the two lines you've detected.The offset of the lane center from the cen
 # compute the radius of curvature of the fit
 
 
-def radius_of_curvature(binary_warped, window_centroids):
-    # to cover same y-range as image
-    ploty = np.linspace(0, binary_warped.shape[0], num=nwindows)
-
-    levels = [level for level in window_centroids]
-    # top to bottom
-    leftx = np.flip([left for left, right in levels], axis=0)
-    rightx = np.flip([right for left, right in levels], axis=0)
-
+def radius_of_curvature(binary_warped, ploty,leftx,rightx):
+   
     # Define y-value where we want radius of curvature
     # I'll choose the maximum y-value, corresponding to the bottom of the image
     y_eval = binary_warped.shape[0]
@@ -91,11 +84,9 @@ def radius_of_curvature(binary_warped, window_centroids):
     right_curverad = (
         (1 + (2 * right_fit[0] * y_eval + right_fit[1])**2)**1.5) / np.absolute(2 * right_fit[0])
 
-    return leftx, rightx, ploty, left_curverad, right_curverad
+    return left_curverad, right_curverad
 
 # TODO display on the image
-
-
 def radius_curvature_in_meter(binary_warped, y_eval, leftx, rightx, ploty):
     # Define conversions in x and y from pixels space to meters
     # meters per pixel in y dimension

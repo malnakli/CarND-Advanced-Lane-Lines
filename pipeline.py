@@ -149,9 +149,14 @@ def transfrom_street_lane(img):
 
 def identify_lane_line(img):
     window_centroids = sw.convolve(img)
-    leftx, rightx, ploty, left_curverad, right_curverad = sw.radius_of_curvature(
-        img, window_centroids)
+    # to cover same y-range as image
+    ploty = np.linspace(0, img.shape[0], num=len(window_centroids))
 
+    levels = [level for level in window_centroids]
+    # top to bottom
+    leftx = np.flip([left for left, right in levels], axis=0)
+    rightx = np.flip([right for left, right in levels], axis=0)
+    
     img = sw.draw_image(img, window_centroids)
     return img, leftx, rightx, ploty
 
