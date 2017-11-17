@@ -8,6 +8,10 @@ from scipy import stats
 
 
 class Tracking():
+    """
+    The Tracking class is responsible for keep tracking of detected lines
+    Tracking start by calling next_frame() function 
+    """
 
     def __init__(self, left_line, right_line):
         self.l = left_line
@@ -32,61 +36,56 @@ class Tracking():
         warped, Minv = pipeline.transform_street_lane(binary)
         # search for lines
         binary_warped_line = self.identify_lane_line(warped)
-
-        result = pipeline.draw_on_original_image(
+        # draw the detected lines on the original image
+        line_drawn_on_original_image = pipeline.draw_on_original_image(
             warped=warped, ploty=self.ploty, leftx=self.leftx, rightx=self.rightx, Minv=Minv, image=frame)
 
+        result = self._draw_some_text(line_drawn_on_original_image)
         return result
 
     def identify_lane_line(self, img):
         # init for first frame
         if self.leftx is None:
             window_centroids = sw.convolve(img)
-            if len(window_centroids) > 0:
-                self._update_l_r(img, window_centroids)
-                # calculate radius of curvature
-                self._cal_radius_of_curvature(img)
-
-                # 1
-                if self._check_similar_curvature():
-                    self._save_history()
-                    self.leftx = self.l.recent_xfitted
-                    self.rightx = self.r.recent_xfitted
-                else:
-                    self.leftx = self.l.allx
-                    self.rightx = self.r.allx
-
-                # draw lines
-                return sw.draw_image(img, window_centroids)
-            else:
-                # return same image, no lines detected
-                return img
         else:
             # lines have been detected
             l_tops, r_tops = self._lines_search()
 
-            left_centroids = sw.update_top_line_centroids(
+            left_centroids = sw.update_line_centroids(
                 img, self.leftx, tops=l_tops, line='l')
 
-            right_centroids = sw.update_top_line_centroids(
+            right_centroids = sw.update_line_centroids(
                 img, self.rightx, tops=r_tops, line='r')
 
             window_centroids = np.array((left_centroids, right_centroids)).T
-            if len(window_centroids) > 0:
-                self._update_l_r(img, window_centroids)
-                # calculate radius of curvature
-                self._cal_radius_of_curvature(img)
 
-                if self._check_similar_curvature() and self._check_distance_horizontally() and self._check_lines_are_parallel():
-                    self._save_history()
-                    self.leftx = self.l.recent_xfitted
-                    self.rightx = self.r.recent_xfitted
-                else:
-                    self._adjust_points()
+        if len(window_centroids) > 0:
+            self._update_l_r(img, window_centroids)
+            # calculate radius of curvature
+            self._cal_radius_of_curvature(img)
 
-            return sw.draw_image(img, window_centroids)
+            if self._sanity_check():
+                self._save_history()
+                self.leftx = self.l.recent_xfitted
+                self.rightx = self.r.recent_xfitted
+            else:
+                self._adjust_points_for_each_line()
+
+        return sw.draw_image(img, window_centroids)
+    
 
     # private
+    def _draw_some_text(self,img):
+        left_curverad ,right_curverad = self._cal_radius_of_curvature_in_meter(img)
+        radius_of_curvature = int(np.average((left_curverad,right_curverad)))
+        radius_of_curvature_text = "Radius of curvature = " + str(radius_of_curvature) + "(m)"
+
+        result = pipeline.draw_text_on_image(img,radius_of_curvature_text,location=(320,40))
+
+        return result
+    def _sanity_check(self):
+        return self._check_similar_curvature() and self._check_distance_horizontally() and self._check_lines_are_parallel()
+
     def _lines_search(self):
 
         # if the last frame where detected
@@ -105,44 +104,40 @@ class Tracking():
 
         return l_tops, r_tops
 
-    def _adjust_points(self):
+    def _adjust_points_for_each_line(self):
+        """
+        Identify which lines left or right was not detected proboply. 
+        by compared to the polynomial of last detected frame
+        """
         DIFF_SUM = .0
 
-        def sum_diffs(ploty, allx, current_fit):
-            line_fit = np.polyfit(ploty, allx, 2)
-            diffs = np.diff(
-                [current_fit, line_fit], axis=0)
+        def sum_diffs(ploty, recent_xfitted, current_fit):
+    
+            if recent_xfitted:
+                line_fit = np.polyfit(ploty, recent_xfitted, 2)
+                diffs = np.diff(
+                    [current_fit, line_fit], axis=0)
 
-            return np.sum(np.absolute(np.divide(diffs, line_fit)))
+                return np.sum(np.absolute(np.divide(diffs, current_fit)))
 
-        # check if the left line was not detected correctly
-
-        # BWT this can be done with calculation of radius of curvature by comparing the diffs between two frames
-        diffs = sum_diffs(self.ploty, self.l.allx, self.l.current_fit)
+            return -1
+        
+        # Get how mach differences between this frame and last one correctly detected for the left line
+        diffs = sum_diffs(self.ploty, self.l.recent_xfitted, self.l.current_fit)
         if diffs > DIFF_SUM:
             self.l.detected = False
             self.leftx = self.l.recent_xfitted
         else:
             self.leftx = self.l.allx
-
-        # check if the right line was detected in the last frame
-        if self.r.detected:
-            # check if the right line was not detected correctly
-            diffs = sum_diffs(self.ploty, self.r.allx, self.r.current_fit)
-            if diffs > DIFF_SUM:
-                self.r.detected = False
-                self.rightx = self.r.recent_xfitted
-            else:
-                self.rightx = self.r.allx
-
-        """
-        when both lines are not detected:
-        - the sum of the differences of line_fits between two frames are bigger than 1
-        - both lines are not detected in the first frame.
-        """
-        if not (self.l.detected and self.r.detected):
-            self.leftx = self.l.allx
+     
+        # Get how mach differences between this frame and last one correctly detected for the right line
+        diffs = sum_diffs(self.ploty, self.r.recent_xfitted, self.r.current_fit)
+        if diffs > DIFF_SUM:
+            self.r.detected = False
+            self.rightx = self.r.recent_xfitted
+        else:
             self.rightx = self.r.allx
+
 
     def _check_distance_horizontally(self):
         distance = 836  # in pixel
@@ -198,6 +193,7 @@ class Tracking():
 
         return False
 
+    # compute the radius of curvature of the fit
     def _cal_radius_of_curvature(self, binary_warped):
 
         # Define y-value where we want radius of curvature
@@ -209,6 +205,32 @@ class Tracking():
 
         self.r.radius_of_curvature = (
             (1 + (2 * self.r.current_fit[0] * y_eval + self.r.current_fit[1])**2)**1.5) / np.absolute(2 * self.r.current_fit[0])
+
+    def _cal_radius_of_curvature_in_meter(self,binary_warped):
+        # Define y-value where we want radius of curvature
+        # I'll choose the maximum y-value, corresponding to the bottom of the image
+        y_eval = binary_warped.shape[0]
+
+        # Define conversions in x and y from pixels space to meters
+        # meters per pixel in y dimension
+        ym_per_pix = 30 / binary_warped.shape[0]
+        # meters per pixel in x dimension
+        xm_per_pix = 3.7 / binary_warped.shape[1]
+
+        # Fit new polynomials to x,y in world space
+        left_fit_cr = np.polyfit(self.ploty * ym_per_pix, self.leftx * xm_per_pix, 2)
+        right_fit_cr = np.polyfit(self.ploty * ym_per_pix, self.rightx * xm_per_pix, 2)
+
+        # Calculate the new radii of curvature
+        left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * ym_per_pix +
+                            left_fit_cr[1])**2)**1.5) / np.absolute(2 * left_fit_cr[0])
+        right_curverad = (
+            (1 + (2 * right_fit_cr[0] * y_eval * ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2 * right_fit_cr[0])
+
+        return left_curverad, right_curverad
+
+
+    # Now our radius of curvature is in meter
 
     def _save_history(self):
         self._save_history_l_line()

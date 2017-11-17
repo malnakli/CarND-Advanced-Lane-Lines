@@ -190,3 +190,18 @@ def draw_on_original_image(warped, leftx, rightx, ploty, Minv, image):
     # Combine the result with the original image
     result = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
     return result
+
+def draw_text_on_image(img,text,location=(0,0)):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    fontScale = 1
+    fontColor = (255,255,255)
+    lineType = 2
+
+    cv2.putText(img,text, 
+        location, 
+        font, 
+        fontScale,
+        fontColor,
+        lineType)
+
+    return img
