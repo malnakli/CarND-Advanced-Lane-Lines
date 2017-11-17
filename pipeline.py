@@ -126,7 +126,7 @@ def region_of_interest(img):
     return masked_image, vertices
 
 
-def transfrom_street_lane(img):
+def transform_street_lane(img):
     img, vertices = region_of_interest(img)
     img_size = img.shape[:2]
 
@@ -149,10 +149,10 @@ def transfrom_street_lane(img):
 
 def identify_lane_line(img):
     window_centroids = sw.convolve(img)
-    
+
     # to cover same y-range as image
     ploty = np.linspace(0, img.shape[0], num=len(window_centroids))
-    leftx, rightx =  np.array(window_centroids).T
+    leftx, rightx = np.array(window_centroids).T
 
     img = sw.draw_image(img, window_centroids)
     return img, leftx, rightx, ploty
@@ -161,7 +161,7 @@ def identify_lane_line(img):
 def draw_on_original_image(warped, leftx, rightx, ploty, Minv, image):
     warp_zero = np.zeros_like(warped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
-    
+
     # top to bottom
     leftx = np.flip(leftx, axis=0)
     rightx = np.flip(rightx, axis=0)

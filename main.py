@@ -54,7 +54,7 @@ def read_test_images():
         save(undistort, 'undistort')
         thresholds = pipeline.combined_binary_thresholds(undistort)
         save(thresholds, 'thresholds')
-        warped, Minv = pipeline.transfrom_street_lane(thresholds)
+        warped, Minv = pipeline.transform_street_lane(thresholds)
         save(warped, 'warped')
         line_fit, leftx, rightx, ploty = pipeline.identify_lane_line(warped)
         save(line_fit, 'line-fit')

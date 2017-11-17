@@ -29,7 +29,7 @@ class Tracking():
         # convert frame to black and white to identify lanes
         binary = pipeline.combined_binary_thresholds(undistort)
         # crop region of interset and transfroming it to a bird a view
-        warped, Minv = pipeline.transfrom_street_lane(binary)
+        warped, Minv = pipeline.transform_street_lane(binary)
         # search for lines
         binary_warped_line = self.identify_lane_line(warped)
 
