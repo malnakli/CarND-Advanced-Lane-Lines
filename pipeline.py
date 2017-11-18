@@ -68,7 +68,7 @@ def combining_thresholds_gradient(img):
 
     combined = np.zeros_like(dir_binary)
 
-    combined[((gradx == 1) | (grady == 1)) | (
+    combined[((gradx == 1) & (grady == 1)) | (
         (mag_binary == 1) & (dir_binary == 1))] = 1
     return combined
 

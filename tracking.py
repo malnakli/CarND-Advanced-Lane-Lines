@@ -79,8 +79,12 @@ class Tracking():
         left_curverad ,right_curverad = self._cal_radius_of_curvature_in_meter(img)
         radius_of_curvature = int(np.average((left_curverad,right_curverad)))
         radius_of_curvature_text = "Radius of curvature = " + str(radius_of_curvature) + "(m)"
+        # left from center
+        vehicle_position_text = "Vehicle is "+\
+        str(self._position_of_the_vehicle_with_respect_to_center(img)) + " m left of center"
 
         result = pipeline.draw_text_on_image(img,radius_of_curvature_text,location=(320,40))
+        result = pipeline.draw_text_on_image(img,vehicle_position_text,location=(320,80))
 
         return result
     def _sanity_check(self):
@@ -141,7 +145,6 @@ class Tracking():
 
     def _check_distance_horizontally(self):
         distance = 836  # in pixel
-        midpoint = 636  # in pixel
         left_fitx = self.l.current_fit[0] * \
             self.ploty**2 + self.l.current_fit[1] * \
             self.ploty + self.l.current_fit[2]
@@ -215,7 +218,7 @@ class Tracking():
         # meters per pixel in y dimension
         ym_per_pix = 30 / binary_warped.shape[0]
         # meters per pixel in x dimension
-        xm_per_pix = 3.7 / binary_warped.shape[1]
+        xm_per_pix = 3.7 / 880 # the lane distance in pixel was calculated manual
 
         # Fit new polynomials to x,y in world space
         left_fit_cr = np.polyfit(self.ploty * ym_per_pix, self.leftx * xm_per_pix, 2)
@@ -229,8 +232,15 @@ class Tracking():
 
         return left_curverad, right_curverad
 
+    def  _position_of_the_vehicle_with_respect_to_center(self,binary_warped):
+        l_distance = self.leftx[0]
+        lane_distance_in_pixel = 880 # the lane distance in pixel was calculated manual
+        xm_per_pix = 3.7 / lane_distance_in_pixel 
+        midpoint = l_distance + (lane_distance_in_pixel/2)
+        center =   binary_warped.shape[1]/2  
+        convert_to_meter = (midpoint - center) * xm_per_pix
+        return convert_to_meter
 
-    # Now our radius of curvature is in meter
 
     def _save_history(self):
         self._save_history_l_line()
