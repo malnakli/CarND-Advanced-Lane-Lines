@@ -6,6 +6,9 @@ import numpy as np
 import sliding_windows as sw
 from scipy import stats
 
+SIMILARITY_RADIUS_OF_CURVATURE = 50 # % of how much they similar
+PARALLEL = 50 # % of parallel 
+HORIZONTAL_DISTANCE = 50 #  pixel
 
 class Tracking():
     """
@@ -73,7 +76,6 @@ class Tracking():
 
         return sw.draw_image(img, window_centroids)
     
-
     # private
     def _draw_some_text(self,img):
         left_curverad ,right_curverad = self._cal_radius_of_curvature_in_meter(img)
@@ -87,6 +89,7 @@ class Tracking():
         result = pipeline.draw_text_on_image(img,vehicle_position_text,location=(320,80))
 
         return result
+    
     def _sanity_check(self):
         return self._check_similar_curvature() and self._check_distance_horizontally() and self._check_lines_are_parallel()
 
@@ -97,14 +100,14 @@ class Tracking():
                                             self.l.last_frame_detected), axis=0))
 
         if self.l.detected:
-            l_tops = .2 * l_frame_diff
+            l_tops = .1 * l_frame_diff
         else:
-            l_tops = .3 * l_frame_diff
+            l_tops = .25 * l_frame_diff
 
         if self.r.detected:
-            r_tops = .2 * l_frame_diff
+            r_tops = .1 * l_frame_diff
         else:
-            r_tops = .3 * l_frame_diff
+            r_tops = .25 * l_frame_diff
 
         return l_tops, r_tops
 
@@ -113,11 +116,11 @@ class Tracking():
         Identify which lines left or right was not detected proboply. 
         by compared to the polynomial of last detected frame
         """
-        DIFF_SUM = .0
+        DIFF_SUM = .4
 
         def sum_diffs(ploty, recent_xfitted, current_fit):
-    
-            if recent_xfitted:
+            
+            if recent_xfitted.any():
                 line_fit = np.polyfit(ploty, recent_xfitted, 2)
                 diffs = np.diff(
                     [current_fit, line_fit], axis=0)
@@ -153,7 +156,7 @@ class Tracking():
             self.r.current_fit[1] * self.ploty + self.r.current_fit[2]
 
         dist = np.absolute(np.average(left_fitx - right_fitx))
-        if int(dist) in range(int(distance - 1), int(distance + 1)):
+        if int(dist) in range(int(distance - HORIZONTAL_DISTANCE), int(distance + HORIZONTAL_DISTANCE)):
             print(dist, 'dist')
             return True
 
@@ -169,9 +172,9 @@ class Tracking():
 
         left_slop = stats.linregress(left_fitx, self.ploty)[0]
         right_slop = stats.linregress(right_fitx, self.ploty)[0]
-        diff = np.absolute(np.diff((left_slop, right_slop), axis=0))
+        diff = np.absolute(np.diff((left_slop, right_slop), axis=0)) ** 100
 
-        if diff < 0:
+        if diff < PARALLEL:
             print(diff, 's')
             return True
 
@@ -189,7 +192,7 @@ class Tracking():
         similarity = int((smaller_v / bigger_v) * 100)
 
         # since we always divided the smaller/bigger then the value should be between 0 and 1
-        if similarity in range(99, 100):
+        if similarity in range(SIMILARITY_RADIUS_OF_CURVATURE, 100):
             print(self.l.radius_of_curvature, 'lc',
                   self.r.radius_of_curvature, 'rc')
             return True
@@ -239,7 +242,7 @@ class Tracking():
         midpoint = l_distance + (lane_distance_in_pixel/2)
         center =   binary_warped.shape[1]/2  
         convert_to_meter = (midpoint - center) * xm_per_pix
-        return convert_to_meter
+        return format(convert_to_meter , '.5f')
 
 
     def _save_history(self):

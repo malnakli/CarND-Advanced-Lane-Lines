@@ -89,7 +89,10 @@ I verified that my perspective transform was working as expected by drawing the 
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+I used sliding windows with convolve approach to find the right and left lines. First I obtained the center point of the left and right lines from the bottom quarter of an image. These codes can be found on lines # 102 through # 123 on `sliding_windows.py`.
+
+Next I used these center pixels number as a based to find find the other centers. Look at `convolve()` line # 126 on `sliding_windows.py` , which take warped image as an argument. 
+Finally I draw the result on the image, and here is an example:
 
 ![alt text][image5]
 
@@ -99,7 +102,7 @@ I did this in lines # through # in my code in `my_other_file.py`
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in lines # 161 through # 192 in my code in `pipeline.py` in the function `draw_on_original_image()`.  Here is an example of my result on a test image:
 
 ![alt text][image6]
 
@@ -118,3 +121,4 @@ Here's a [link to my video result](./output-project_video.mp4)
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+
