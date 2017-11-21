@@ -6,9 +6,10 @@ import numpy as np
 import sliding_windows as sw
 from scipy import stats
 
-SIMILARITY_RADIUS_OF_CURVATURE = 70  # % of how much they similar
-PARALLEL = 70  # % of parallel
-HORIZONTAL_DISTANCE_MATCH = 97  # pixel
+SIMILARITY_RADIUS_OF_CURVATURE = 70  # % of how much left and right radius of curvature similar
+PARALLEL = 70  # % of parallel of left and right lines
+HORIZONTAL_DISTANCE_MATCH = 97  # % of how much distance match actual one
+LINE_CHANGED = 40 # % of how much line has changed from previous frame
 
 
 class Tracking():
@@ -119,11 +120,10 @@ class Tracking():
 
     def _adjust_points_for_each_line(self):
         """
-        Identify which lines left or right was not detected proboply. 
+        Identify which lines left or right was not detected properly. 
         by compared to the polynomial of last detected frame
         """
-        DIFF_SUM = .4
-
+    
         def sum_diffs(ploty, recent_xfitted, current_fit):
 
             if recent_xfitted.any():
@@ -131,14 +131,14 @@ class Tracking():
                 diffs = np.diff(
                     [current_fit, line_fit], axis=0)
 
-                return np.sum(np.absolute(np.divide(diffs, current_fit)))
+                return np.sum(np.absolute(np.divide(diffs, current_fit))) * 100
 
             return -1
 
         # Get how mach differences between this frame and last one correctly detected for the left line
         diffs = sum_diffs(self.ploty, self.l.recent_xfitted,
                           self.l.current_fit)
-        if diffs > DIFF_SUM:
+        if diffs > LINE_CHANGED:
             self.l.detected = False
             self.leftx = self.l.recent_xfitted
         else:
@@ -147,7 +147,7 @@ class Tracking():
         # Get how mach differences between this frame and last one correctly detected for the right line
         diffs = sum_diffs(self.ploty, self.r.recent_xfitted,
                           self.r.current_fit)
-        if diffs > DIFF_SUM:
+        if diffs > LINE_CHANGED:
             self.r.detected = False
             self.rightx = self.r.recent_xfitted
         else:
