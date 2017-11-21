@@ -78,13 +78,13 @@ def update_line_centroids(binary_warped, old_line_centroids, tops=.1, line=None)
             pre_center = first_l_centroids(binary_warped)
         else:
             pre_center = first_r_centroids(binary_warped)
-        
+
         line_centroids.append(pre_center)
     else:
         tops = math.ceil(len(old_line_centroids) * tops)
         line_centroids = old_line_centroids[:-tops]
         pre_center = line_centroids[-1]
-        
+
     for level in range(len(line_centroids), (int)(binary_warped.shape[0] / window_height)):
 
         conv_signal = _conv_signal(binary_warped, level)

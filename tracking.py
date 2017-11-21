@@ -6,9 +6,10 @@ import numpy as np
 import sliding_windows as sw
 from scipy import stats
 
-SIMILARITY_RADIUS_OF_CURVATURE = 50 # % of how much they similar
-PARALLEL = 50 # % of parallel 
-HORIZONTAL_DISTANCE = 50 #  pixel
+SIMILARITY_RADIUS_OF_CURVATURE = 50  # % of how much they similar
+PARALLEL = 50  # % of parallel
+HORIZONTAL_DISTANCE = 50  # pixel
+
 
 class Tracking():
     """
@@ -75,21 +76,26 @@ class Tracking():
                 self._adjust_points_for_each_line()
 
         return sw.draw_image(img, window_centroids)
-    
-    # private
-    def _draw_some_text(self,img):
-        left_curverad ,right_curverad = self._cal_radius_of_curvature_in_meter(img)
-        radius_of_curvature = int(np.average((left_curverad,right_curverad)))
-        radius_of_curvature_text = "Radius of curvature = " + str(radius_of_curvature) + "(m)"
-        # left from center
-        vehicle_position_text = "Vehicle is "+\
-        str(self._position_of_the_vehicle_with_respect_to_center(img)) + " m left of center"
 
-        result = pipeline.draw_text_on_image(img,radius_of_curvature_text,location=(320,40))
-        result = pipeline.draw_text_on_image(img,vehicle_position_text,location=(320,80))
+    # private
+    def _draw_some_text(self, img):
+        left_curverad, right_curverad = self._cal_radius_of_curvature_in_meter(
+            img)
+        radius_of_curvature = int(np.average((left_curverad, right_curverad)))
+        radius_of_curvature_text = "Radius of curvature = " + \
+            str(radius_of_curvature) + "(m)"
+        # left from center
+        vehicle_position_text = "Vehicle is " +\
+            str(self._position_of_the_vehicle_with_respect_to_center(
+                img)) + " m left of center"
+
+        result = pipeline.draw_text_on_image(
+            img, radius_of_curvature_text, location=(320, 40))
+        result = pipeline.draw_text_on_image(
+            img, vehicle_position_text, location=(320, 80))
 
         return result
-    
+
     def _sanity_check(self):
         return self._check_similar_curvature() and self._check_distance_horizontally() and self._check_lines_are_parallel()
 
@@ -119,7 +125,7 @@ class Tracking():
         DIFF_SUM = .4
 
         def sum_diffs(ploty, recent_xfitted, current_fit):
-            
+
             if recent_xfitted.any():
                 line_fit = np.polyfit(ploty, recent_xfitted, 2)
                 diffs = np.diff(
@@ -128,23 +134,24 @@ class Tracking():
                 return np.sum(np.absolute(np.divide(diffs, current_fit)))
 
             return -1
-        
+
         # Get how mach differences between this frame and last one correctly detected for the left line
-        diffs = sum_diffs(self.ploty, self.l.recent_xfitted, self.l.current_fit)
+        diffs = sum_diffs(self.ploty, self.l.recent_xfitted,
+                          self.l.current_fit)
         if diffs > DIFF_SUM:
             self.l.detected = False
             self.leftx = self.l.recent_xfitted
         else:
             self.leftx = self.l.allx
-     
+
         # Get how mach differences between this frame and last one correctly detected for the right line
-        diffs = sum_diffs(self.ploty, self.r.recent_xfitted, self.r.current_fit)
+        diffs = sum_diffs(self.ploty, self.r.recent_xfitted,
+                          self.r.current_fit)
         if diffs > DIFF_SUM:
             self.r.detected = False
             self.rightx = self.r.recent_xfitted
         else:
             self.rightx = self.r.allx
-
 
     def _check_distance_horizontally(self):
         distance = 836  # in pixel
@@ -212,7 +219,7 @@ class Tracking():
         self.r.radius_of_curvature = (
             (1 + (2 * self.r.current_fit[0] * y_eval + self.r.current_fit[1])**2)**1.5) / np.absolute(2 * self.r.current_fit[0])
 
-    def _cal_radius_of_curvature_in_meter(self,binary_warped):
+    def _cal_radius_of_curvature_in_meter(self, binary_warped):
         # Define y-value where we want radius of curvature
         # I'll choose the maximum y-value, corresponding to the bottom of the image
         y_eval = binary_warped.shape[0]
@@ -221,29 +228,30 @@ class Tracking():
         # meters per pixel in y dimension
         ym_per_pix = 30 / binary_warped.shape[0]
         # meters per pixel in x dimension
-        xm_per_pix = 3.7 / 880 # the lane distance in pixel was calculated manual
+        xm_per_pix = 3.7 / 880  # the lane distance in pixel was calculated manual
 
         # Fit new polynomials to x,y in world space
-        left_fit_cr = np.polyfit(self.ploty * ym_per_pix, self.leftx * xm_per_pix, 2)
-        right_fit_cr = np.polyfit(self.ploty * ym_per_pix, self.rightx * xm_per_pix, 2)
+        left_fit_cr = np.polyfit(
+            self.ploty * ym_per_pix, self.leftx * xm_per_pix, 2)
+        right_fit_cr = np.polyfit(
+            self.ploty * ym_per_pix, self.rightx * xm_per_pix, 2)
 
         # Calculate the new radii of curvature
         left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * ym_per_pix +
-                            left_fit_cr[1])**2)**1.5) / np.absolute(2 * left_fit_cr[0])
+                               left_fit_cr[1])**2)**1.5) / np.absolute(2 * left_fit_cr[0])
         right_curverad = (
             (1 + (2 * right_fit_cr[0] * y_eval * ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2 * right_fit_cr[0])
 
         return left_curverad, right_curverad
 
-    def  _position_of_the_vehicle_with_respect_to_center(self,binary_warped):
+    def _position_of_the_vehicle_with_respect_to_center(self, binary_warped):
         l_distance = self.leftx[0]
-        lane_distance_in_pixel = 880 # the lane distance in pixel was calculated manual
-        xm_per_pix = 3.7 / lane_distance_in_pixel 
-        midpoint = l_distance + (lane_distance_in_pixel/2)
-        center =   binary_warped.shape[1]/2  
+        lane_distance_in_pixel = 880  # the lane distance in pixel was calculated manual
+        xm_per_pix = 3.7 / lane_distance_in_pixel
+        midpoint = l_distance + (lane_distance_in_pixel / 2)
+        center = binary_warped.shape[1] / 2
         convert_to_meter = (midpoint - center) * xm_per_pix
-        return format(convert_to_meter , '.5f')
-
+        return format(convert_to_meter, '.5f')
 
     def _save_history(self):
         self._save_history_l_line()
