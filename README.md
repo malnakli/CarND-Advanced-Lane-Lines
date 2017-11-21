@@ -119,19 +119,21 @@ Here's a [link to my video result](./output-project_video.mp4)
 ### Discussion
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
-
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+ 
 
 I have implemented a tracking class, which is responsible for tracking left and right lines on each frame and adjusting them. (can be found in `tracking.py`)
 
-- Initialize Tracking class with left and right lines.       
+- Initialize Tracking class with left and right lines, see `LINE()` class on `line_class.py`.       
 - pass a frame to `next_frame()` on line # 30 through # 49          
 **Here I will  explanation deeply what this function do:**    
 1. undistort image by calling `pipeline.distortion_image()`
+
 2. apply different combination to create a binary image containing  lane pixels by calling  `pipeline.combined_binary_thresholds()`.         
 > This method need improvement, even though it does a good job on show lane pixels in most of the project_video.mp4, but it does not work well on shadow and unclear lines such as on challenge_video.mp4. Improvement can be done by finding the beast combination of color transforms and gradients, as well as, applying another color channel beside s_channel from HLS.
 
 3. Performed a perspective transform by calling `pipeline.transform_street_lane()`. This method crop the image to region of interest and then transform it to bird view. 
+> It needs improving to cover all the line for any cases, because it does not cover the lines when turn is sharp as on harder_challenge_video.mp4
+
 4. identified lane-line pixels by calling `identify_lane_line()` function on line # 50 in `tracking.py`.
     1. search for the window centroids of a frame:  
     A. For the first frame, start searching from scratch using a convolution and sliding window.     
@@ -139,12 +141,17 @@ I have implemented a tracking class, which is responsible for tracking left and 
 
     2. calculate the radius of curvature for both lines.
     3. call sanity check, which includes the following: 
-    - `_check_similar_curvature()` function, which check how similar the left and right line, this number can be adjusted by changing the value of the variable  `SIMILARITY_RADIUS_OF_CURVATURE` in line # 9 in `tracking.py`. `70%` was selected
-    - `_check_distance_horizontally()` function, which check the distance between left and right line. the distance should be `836` which was calculate manual from one of warped image. Also this can be adjustable by changing the `HORIZONTAL_DISTANCE_MATCH`, `97%` was selected
-    - `_check_lines_are_parallel()` function, which check how parallel to lines by comparing their slops, this can be adjusted via changing variable `PARALLEL`. `75%` was selected.
-    4. A. if all the sanity check return true, then save the lines values.
-    4. B. if sanity check failed, then call `_adjust_points_for_each_line()` function, it checks which line was changed from the previous frame by comparing the differences of the line fit current frame and previous one. if the change more then the value of the variable `LINE_CHANGED`, then use the previous points for that line.
+        - `_check_similar_curvature()` function, which check how similar the left and right line, this number can be adjusted by changing the value of the variable  `SIMILARITY_RADIUS_OF_CURVATURE` in line # 9 in `tracking.py`. `70%` was selected
+        - `_check_distance_horizontally()` function, which check the distance between left and right line. the distance should be `836` which was calculate manual from one of warped image. Also this can be adjustable by changing the `HORIZONTAL_DISTANCE_MATCH`, `97%` was selected
+        - `_check_lines_are_parallel()` function, which check how parallel to lines by comparing their slops, this can be adjusted via changing variable `PARALLEL`. `75%` was selected.
+    4. 
+        1. if all the sanity check return true, then save the lines values.
+        2. if sanity check failed, then call `_adjust_points_for_each_line()` function, it checks which line was changed from the previous frame by comparing the differences of the line fit current frame and previous one. if the change more then the value of the variable `LINE_CHANGED`, then use the previous points for that line.
+
     5. Lastly, `identify_lane_line()` function draw the detected lines on the image and return.
+
+> Also Smoothing can be apply: " Each time you get a new high-confidence measurement, you can append it to the list of recent measurements and then take an average over n past measurements to obtain the lane position you want to draw onto the image". The `Tracking()` class already saved these values.
+
 5. After lines have been detected, draw the image back to original image by calling `pipeline.draw_on_original_image()` function.
 6. In the end, draw radius of curvature and position of the vehicle with respect to center to the imaged that return from `pipeline.draw_on_original_image()` function.
 

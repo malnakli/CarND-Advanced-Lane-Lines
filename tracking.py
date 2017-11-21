@@ -1,15 +1,15 @@
 
 # Tracking class
-
 import pipeline
 import numpy as np
 import sliding_windows as sw
 from scipy import stats
 
+
 SIMILARITY_RADIUS_OF_CURVATURE = 70  # % of how much left and right radius of curvature similar
-PARALLEL = 70  # % of parallel of left and right lines
+PARALLEL = 50  # % of parallel of left and right lines
 HORIZONTAL_DISTANCE_MATCH = 97  # % of how much distance match actual one
-LINE_CHANGED = 40 # % of how much line has changed from previous frame
+LINE_CHANGED = 35 # % of how much line has changed from previous frame
 
 
 class Tracking():
@@ -163,9 +163,10 @@ class Tracking():
             self.r.current_fit[1] * self.ploty + self.r.current_fit[2]
 
         estimated_distance = np.absolute(np.average(left_fitx - right_fitx))
-        distance_match = 100 - ((np.absolute(actual_distance - estimated_distance)/actual_distance) * 100) 
-        if int(distance_match) in range(HORIZONTAL_DISTANCE_MATCH, 100):
-            print(distance_match,'distance_match')
+
+        distance_match = 100 - self.percentage_difference(actual_distance,estimated_distance)
+        if distance_match > HORIZONTAL_DISTANCE_MATCH:
+            #print(distance_match,'distance_match')
             return True
 
         return False
@@ -180,28 +181,20 @@ class Tracking():
 
         left_slop = stats.linregress(left_fitx, self.ploty)[0]
         right_slop = stats.linregress(right_fitx, self.ploty)[0]
-        diff = np.absolute(np.diff((left_slop, right_slop), axis=0)) ** 100
-
-        if diff < PARALLEL:
-
+        diff = 100 - self.percentage_difference(left_slop,right_slop)
+        
+        if diff > PARALLEL:
+            #print(diff,'parallel')
             return True
 
         return False
 
     def _check_similar_curvature(self):
 
-        if self.l.radius_of_curvature > self.r.radius_of_curvature:
-            smaller_v = self.r.radius_of_curvature
-            bigger_v = self.l.radius_of_curvature
-        else:
-            smaller_v = self.l.radius_of_curvature
-            bigger_v = self.r.radius_of_curvature
-
-        similarity = int((smaller_v / bigger_v) * 100)
-
+        similarity = 100 - self.percentage_difference(self.l.radius_of_curvature,self.r.radius_of_curvature)
         # since we always divided the smaller/bigger then the value should be between 0 and 1
-        if similarity in range(SIMILARITY_RADIUS_OF_CURVATURE, 100):
-     
+        if similarity > SIMILARITY_RADIUS_OF_CURVATURE:
+            #print(similarity,'similarity')
             return True
 
         return False
@@ -286,3 +279,11 @@ class Tracking():
 
         self.r.current_fit = np.polyfit(
             self.ploty, self.r.allx, 2)
+
+    @classmethod
+    def percentage_difference(cls,x,y):
+        x = np.absolute(x)
+        y = np.absolute(y)
+        diff =  np.diff((x, y), axis=0)
+        percentage = diff / x if x > y else diff / y
+        return round(np.absolute(percentage)[0] * 100)
