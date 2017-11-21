@@ -152,11 +152,21 @@ def identify_lane_line(img):
 
     # to cover same y-range as image
     ploty = np.linspace(0, img.shape[0], num=len(window_centroids))
+    
     leftx, rightx = np.array(window_centroids).T
+    
+    left_fit = np.polyfit(ploty, leftx, 2)
+    left_fitx = left_fit[0] * ploty**2 + \
+        left_fit[1] * ploty + left_fit[2]
+
+    right_fit = np.polyfit(ploty, rightx, 2)
+    right_fitx = right_fit[0] * ploty ** 2 + \
+        right_fit[1] * ploty + right_fit[2]
+
+    window_centroids = np.array((left_fitx, right_fitx)).T
 
     img = sw.draw_image(img, window_centroids)
     return img, leftx, rightx, ploty
-
 
 def draw_on_original_image(warped, leftx, rightx, ploty, Minv, image):
     warp_zero = np.zeros_like(warped).astype(np.uint8)

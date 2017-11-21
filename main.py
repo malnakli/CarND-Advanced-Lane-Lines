@@ -42,7 +42,7 @@ def read_video(filename='challenge_video.mp4', saved=False):
 
 def read_test_images():
     images = glob.glob('test_images/*.jpg')
-
+    tracking = Tracking(Line(), Line())
     def save(img, name):
         filepath = "output_images/" + name + "-" + str(fname.split('/')[-1])
         cv2.imwrite(filepath, img)
@@ -58,14 +58,13 @@ def read_test_images():
         save(warped, 'warped')
         line_fit, leftx, rightx, ploty = pipeline.identify_lane_line(warped)
         save(line_fit, 'line-fit')
-        output = pipeline.draw_on_original_image(
-            warped=warped, leftx=leftx, rightx=rightx, ploty=ploty, Minv=Minv, image=frame)
+        output = tracking.next_frame(frame)
         save(output, 'output')
 
 
 def main(args):
     read_video(filename=args.fileinput, saved=args.save_video)
-    # read_test_images()
+    #read_test_images()
 
 
 if __name__ == "__main__":

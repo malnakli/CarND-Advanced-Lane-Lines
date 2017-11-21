@@ -17,7 +17,7 @@ The goals / steps of this project are the following:
 [image2]: ./output_images/undistort-straight_lines1.jpg "Road Transformed"
 [image3]: ./output_images/thresholds-straight_lines1.jpg "Binary Example"
 [image4]: ./output_images/warped-straight_lines1.jpg "Warp Example"
-[image5]: ./output_images/line-fit-straight_lines2.jpg "Fit Visual"
+[image5]: ./output_images/line-fit-straight_lines1.jpg "Fit Visual"
 [image6]: ./output_images/output-straight_lines1.jpg "Output"
 [video1]: ./output_project_video.mp4 "Video"
 
@@ -102,7 +102,7 @@ I did this in lines # 210 through # 220  by calling `_cal_radius_of_curvature()`
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # 161 through # 192 in my code in `pipeline.py` in the function `draw_on_original_image()`.  Here is an example of my result on a test image:
+I implemented this step in lines # 171 through # 202 in my code in `pipeline.py` in the function `draw_on_original_image()`.  Here is an example of my result on a test image:
 
 ![alt text][image6]
 
