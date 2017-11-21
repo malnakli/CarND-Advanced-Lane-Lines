@@ -72,7 +72,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--fileinput',
                         type=str, help='finename of a video file')
-    parser.add_argument('-s', '--save_video',
-                        type=bool, help='Either to save the output result or not')
+    parser.add_argument('-s', '--save_video', action="store_true", default=False,
+                        help='Either to save the output result or not')
 
     main(parser.parse_args())
