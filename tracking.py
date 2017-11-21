@@ -6,9 +6,9 @@ import numpy as np
 import sliding_windows as sw
 from scipy import stats
 
-SIMILARITY_RADIUS_OF_CURVATURE = 50  # % of how much they similar
-PARALLEL = 50  # % of parallel
-HORIZONTAL_DISTANCE = 50  # pixel
+SIMILARITY_RADIUS_OF_CURVATURE = 70  # % of how much they similar
+PARALLEL = 70  # % of parallel
+HORIZONTAL_DISTANCE_MATCH = 97  # pixel
 
 
 class Tracking():
@@ -154,7 +154,7 @@ class Tracking():
             self.rightx = self.r.allx
 
     def _check_distance_horizontally(self):
-        distance = 836  # in pixel
+        actual_distance = 836  # in pixel
         left_fitx = self.l.current_fit[0] * \
             self.ploty**2 + self.l.current_fit[1] * \
             self.ploty + self.l.current_fit[2]
@@ -162,9 +162,10 @@ class Tracking():
         right_fitx = self.r.current_fit[0] * self.ploty**2 + \
             self.r.current_fit[1] * self.ploty + self.r.current_fit[2]
 
-        dist = np.absolute(np.average(left_fitx - right_fitx))
-        if int(dist) in range(int(distance - HORIZONTAL_DISTANCE), int(distance + HORIZONTAL_DISTANCE)):
-            print(dist, 'dist')
+        estimated_distance = np.absolute(np.average(left_fitx - right_fitx))
+        distance_match = 100 - ((np.absolute(actual_distance - estimated_distance)/actual_distance) * 100) 
+        if int(distance_match) in range(HORIZONTAL_DISTANCE_MATCH, 100):
+            print(distance_match,'distance_match')
             return True
 
         return False
@@ -182,7 +183,7 @@ class Tracking():
         diff = np.absolute(np.diff((left_slop, right_slop), axis=0)) ** 100
 
         if diff < PARALLEL:
-            print(diff, 's')
+
             return True
 
         return False
@@ -200,8 +201,7 @@ class Tracking():
 
         # since we always divided the smaller/bigger then the value should be between 0 and 1
         if similarity in range(SIMILARITY_RADIUS_OF_CURVATURE, 100):
-            print(self.l.radius_of_curvature, 'lc',
-                  self.r.radius_of_curvature, 'rc')
+     
             return True
 
         return False
@@ -245,12 +245,12 @@ class Tracking():
         return left_curverad, right_curverad
 
     def _position_of_the_vehicle_with_respect_to_center(self, binary_warped):
-        l_distance = self.leftx[0]
+        l_distance = self.leftx[0] # get the pixel of left line
         lane_distance_in_pixel = 880  # the lane distance in pixel was calculated manual
-        xm_per_pix = 3.7 / lane_distance_in_pixel
-        midpoint = l_distance + (lane_distance_in_pixel / 2)
-        center = binary_warped.shape[1] / 2
-        convert_to_meter = (midpoint - center) * xm_per_pix
+        xm_per_pix = 3.7 / lane_distance_in_pixel # get meter per pixel
+        midpoint = l_distance + (lane_distance_in_pixel / 2) # midpoint between left and right lines
+        center = binary_warped.shape[1] / 2 # image center
+        convert_to_meter = (midpoint - center) * xm_per_pix # position in meter
         return format(convert_to_meter, '.5f')
 
     def _save_history(self):

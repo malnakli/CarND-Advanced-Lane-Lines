@@ -98,7 +98,7 @@ Finally I draw the result on the image, and here is an example:
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I did this in lines # 210 through # 220  by calling `_cal_radius_of_curvature()` function in `tracking.py`. and lines # 247 through # 254 by calling `_position_of_the_vehicle_with_respect_to_center()` function in `tracking.py`
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
@@ -122,3 +122,20 @@ Here's a [link to my video result](./output-project_video.mp4)
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
 
+I have implemented a tracking class, which is responsible for tracking left and right lines on each frame and adjusting them. (can be found in `tracking.py`)
+
+- Initialize Tracking class with left and right lines.
+- pass a frame to `next_frame()` on line # 28 through # 45 . Here an deep explanation on what this function do    
+1. undistort image by calling `pipeline.distortion_image()`
+2. apply different combination to create a binary image containing  lane pixels by calling  `pipeline.combined_binary_thresholds()`.    
+> This method need improvement, even though it does a good job on show lane pixels in most of the project_video.mp4, but it does not work well on shadow and unclear lines such as on challenge_video.mp4. Improvement can be done by finding the beast combination of color transforms and gradients, as well as, applying another color channel beside s_channel from HLS.
+3. Performed a perspective transform by calling `pipeline.transform_street_lane()`. This method crop the image to region of interest and then transform it to bird view. 
+4. identified lane-line pixels by calling `self.identify_lane_line()` on line # 50 in `tracking.py`.
+    1. search for the window centroids of a frame, start searching from scratch using a convolution and sliding window for the first frame.
+    2. calculate the radius of curvature for both lines.
+    3. call sanity check, which includes the following: 
+    - `_check_similar_curvature()` function, which check how similar the left and right line, this number can be adjusted by changing the value of the variable  `SIMILARITY_RADIUS_OF_CURVATURE` in line # 9 in `tracking.py`. `70%` was selected
+    - `_check_distance_horizontally()` function, which check the distance between left and right line. the distance should be `836` which was calculate manual from one of warped image. Also this can be adjustable by changing the `HORIZONTAL_DISTANCE_MATCH`, `97%` was selected
+    - `_check_lines_are_parallel()` function, which check how parallel to lines by comparing their slops, this can be adjusted via changing variable `PARALLEL`. `75%` was selected.
+    4. A. if all the sanity check return true, then save the lines values.
+    4. B. if sanity check failed, then call `_adjust_points_for_each_line()`
